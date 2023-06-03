@@ -11,6 +11,7 @@ import static common.constants.RpcConstants.MAGIC_NUMBER;
 /**
  * RPC解码器
  * 在实现解码的过程中需要考虑是否会有粘包拆包的问题，而且还要设置请求数据包体积最大值
+ * 反序列化处理
  */
 public class RpcDecoder extends ByteToMessageDecoder {
 

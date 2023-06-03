@@ -7,6 +7,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 /**
  * RPC编码器
  * 当数据发送之前，会通过这个模块
+ * 序列化处理
  */
 public class RpcEncoder extends MessageToByteEncoder<RpcProtocol> {
 
