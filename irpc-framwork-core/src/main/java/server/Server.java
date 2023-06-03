@@ -66,9 +66,10 @@ public class Server {
         Server server = new Server();
         ServerConfig serverConfig = new ServerConfig();
         serverConfig.setPort(9090);
+        serverConfig.setServerAddr("localhost");
         server.setServerConfig(serverConfig);
         // 测试类
-        // server.registerService(new DataServiceImpl());
+        server.registerService(new DataServiceImpl());
         server.startApplication();
     }
 }

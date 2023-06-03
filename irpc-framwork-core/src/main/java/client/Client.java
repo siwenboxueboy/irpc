@@ -7,6 +7,7 @@ import common.RpcEncoder;
 import common.RpcInvocation;
 import common.RpcProtocol;
 import common.config.ClientConfig;
+import interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -14,6 +15,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.Getter;
 import lombok.Setter;
 import org.slf4j.Logger;
@@ -35,7 +37,7 @@ public class Client {
         EventLoopGroup clientGroup = new NioEventLoopGroup();
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(clientGroup);
-        bootstrap.channel(NioSctpChannel.class);
+        bootstrap.channel(NioSocketChannel.class);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             /**
              * @param ch
@@ -54,6 +56,20 @@ public class Client {
         this.startClient(channelFuture);
         RpcReference rpcReference = new RpcReference(new JDKProxyFactory());
         return rpcReference;
+    }
+
+    public static void main(String[] args) throws Throwable {
+        Client client = new Client();
+        ClientConfig clientConfig = new ClientConfig();
+        clientConfig.setPort(9090);
+        clientConfig.setServerAddr("localhost");
+        client.setClientConfig(clientConfig);
+        RpcReference rpcReference = client.startClientApplication();
+        DataService dataService = rpcReference.get(DataService.class);
+        for(int i=0;i<100;i++){
+            String result = dataService.sendData("test");
+            System.out.println(result);
+        }
     }
 
     private void startClient(ChannelFuture channelFuture) {
