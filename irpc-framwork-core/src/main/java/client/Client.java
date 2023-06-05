@@ -56,7 +56,6 @@ public class Client {
      * 3. 初始化 代理工厂
      */
     public RpcReference initClientApplication() throws InterruptedException {
-        EventLoopGroup clientGroup = new NioEventLoopGroup();
         bootstrap.group(clientGroup);
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
