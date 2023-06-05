@@ -1,7 +1,9 @@
 package proxy.javassist;
 
+import cn.hutool.core.lang.Console;
 import javassist.*;
 
+import java.io.File;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -48,7 +50,9 @@ public class ProxyGenerator {
 
         proxy.addConstructor(CtNewConstructor.defaultConstructor(proxy));
         targetClass.getInterfaces();
-
+        String targetClassPath = targetClass.getPackageName();
+        ClassPool.getDefault().appendClassPath(new LoaderClassPath(Thread.currentThread().getContextClassLoader()));
+        // TODO 同时注意在生成javassist CtClass -> Class时，加载的classloader不能是SystemClassLoade，原因亦如。
         //约定 被代理对象本身就是interface
         CtClass ctClass = pool.get(targetClass.getName());
         //生成的代理对象要求继承指定的接口

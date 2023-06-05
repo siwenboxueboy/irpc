@@ -5,9 +5,8 @@ import lombok.Data;
 @Data
 public class ServerConfig {
 
-
-    private int port;
-
-    private String serverAddr;
+    private String registerAddr;
+    private String applicationName;
+    private Integer serverPort;
 
 }

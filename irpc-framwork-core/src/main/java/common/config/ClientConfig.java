@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class ClientConfig {
-    private String serverAddr;
-    private int port;
+    private String proxyType;
+    private String registerAddr;
+    private String applicationName;
 }

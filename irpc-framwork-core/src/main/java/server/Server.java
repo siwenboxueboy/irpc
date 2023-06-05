@@ -4,7 +4,9 @@ package server;
 import cn.hutool.core.lang.Console;
 import common.RpcDecoder;
 import common.RpcEncoder;
+import common.config.PropertiesBootstrap;
 import common.config.ServerConfig;
+import common.utils.CommonUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -14,9 +16,15 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import registy.RegistryService;
+import registy.URL;
+import registy.zookeeper.ZookeeperRegister;
 
 import static common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
+import static common.cache.CommonServerCache.PROVIDER_URL_SET;
 
+@Slf4j
 public class Server {
 
 
@@ -26,6 +34,8 @@ public class Server {
     @Getter
     @Setter
     private ServerConfig serverConfig;
+
+    private RegistryService registryService;
 
     public void startApplication() throws InterruptedException {
         bossGroup = new NioEventLoopGroup();
@@ -46,30 +56,70 @@ public class Server {
                 ch.pipeline().addLast(new ServerHandler());
             }
         });
-        bootstrap.bind(serverConfig.getPort()).sync();
+        this.batchExportUrl();
+        bootstrap.bind(serverConfig.getServerPort()).sync();
     }
 
-    public void registerService(Object serviceBean) {
+    /**
+     * 服务提供者设置要暴露的服务接口信息
+     */
+    public void exportService(Object serviceBean) {
         if (serviceBean.getClass().getInterfaces().length == 0) {
-            throw new RuntimeException("service must had interfaces！");
+            throw new RuntimeException("service must had interfaces!");
         }
-        Class<?>[] classes = serviceBean.getClass().getInterfaces();
+        Class[] classes = serviceBean.getClass().getInterfaces();
         if (classes.length > 1) {
-            throw new RuntimeException("service must only had one interfaces！");
+            throw new RuntimeException("service must only had one interfaces!");
         }
-        Class<?> interfaceClass = classes[0];
-        // 需要注册的对象统一放在一个Map集合中进行管理
+        // todo 这个为什么不放在batchExportUrl()方法中？
+        if (registryService == null) {
+            registryService = new ZookeeperRegister(serverConfig.getRegisterAddr());
+        }
+        //默认选择该对象的第一个实现接口
+        Class interfaceClass = classes[0];
+
         PROVIDER_CLASS_MAP.put(interfaceClass.getName(), serviceBean);
+
+        URL url = new URL();
+        url.setServiceName(interfaceClass.getName());
+        url.setApplicationName(serverConfig.getApplicationName());
+        url.addParameter("host", CommonUtils.getIpAddress());
+        url.addParameter("port", String.valueOf(serverConfig.getServerPort()));
+        PROVIDER_URL_SET.add(url);
+    }
+
+    /**
+     * 服务提供者暴露服务接口，方便客户端进行调用
+     */
+    public void batchExportUrl() {
+        Thread task = new Thread(() -> {
+            try {
+                Thread.sleep(2500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            for (URL url : PROVIDER_URL_SET) {
+                // 服务端注册服务接口
+                registryService.register(url);
+            }
+        });
+        task.start();
+    }
+
+    private void initServerConfig() {
+        ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
+        this.setServerConfig(serverConfig);
     }
 
     public static void main(String[] args) throws InterruptedException {
         Server server = new Server();
-        ServerConfig serverConfig = new ServerConfig();
-        serverConfig.setPort(9090);
-        serverConfig.setServerAddr("0.0.0.0");
-        server.setServerConfig(serverConfig);
-        // 测试类
-        server.registerService(new DataServiceImpl());
+        // 初始化服务配置
+        server.initServerConfig();
+        // 暴露服务提供者接口
+        server.exportService(new DataServiceImpl());
+        // 启动服务
         server.startApplication();
+        log.info("启动成功");
     }
+
 }
