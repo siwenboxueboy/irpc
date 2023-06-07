@@ -50,6 +50,9 @@ public class ServiceUpdateListener implements IRpcListener<IRpcUpdateEvent> {
                 String oldServerAddress = channelFutureWrapper.getHost() + ":" + channelFutureWrapper.getPort();
                 // 如果老的URL不存在 则不处理
                 if (!matchProviderUrl.contains(oldServerAddress)) {
+                    // todo 连接因为服务端已经下线了 客户端不用下线吗？
+                    // todo 将引用置空？
+                    channelFutureWrapper = null;
                     continue;
                 } else {
                     // 如果存在的话 加入结果集
@@ -73,6 +76,7 @@ public class ServiceUpdateListener implements IRpcListener<IRpcUpdateEvent> {
                     channelFutureWrapper.setHost(host);
                     ChannelFuture channelFuture = null;
                     try {
+                        // 如果有新的服务提供者则新建连接
                         channelFuture = ConnectionHandler.createChannelFuture(host,port);
                         channelFutureWrapper.setChannelFuture(channelFuture);
 

@@ -140,7 +140,7 @@ public class Client {
             URL url = new URL();
             url.setServiceName(providerServiceName);
             //客户端在此新增一个订阅的功能
-            // todo 为什么要在这里做这个事情？
+            // 为什么要在这里做这个事情？ 上面connect连接了提供者，这里要监听提供者是否下线，如果下线了，客户端要主动断开连接
             abstractRegister.doAfterSubscribe(url);
         }
     }
