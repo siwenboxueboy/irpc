@@ -6,6 +6,7 @@ import common.RpcDecoder;
 import common.RpcEncoder;
 import common.config.PropertiesBootstrap;
 import common.config.ServerConfig;
+import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -21,8 +22,7 @@ import registy.RegistryService;
 import registy.URL;
 import registy.zookeeper.ZookeeperRegister;
 
-import static common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
-import static common.cache.CommonServerCache.PROVIDER_URL_SET;
+import static common.cache.CommonServerCache.*;
 
 @Slf4j
 public class Server {
@@ -31,11 +31,11 @@ public class Server {
     private static EventLoopGroup bossGroup = null;
     private static EventLoopGroup workerGroup = null;
 
+    private static IRpcListenerLoader iRpcListenerLoader;
+
     @Getter
     @Setter
     private ServerConfig serverConfig;
-
-    private RegistryService registryService;
 
     public void startApplication() throws InterruptedException {
         bossGroup = new NioEventLoopGroup();
@@ -72,8 +72,8 @@ public class Server {
             throw new RuntimeException("service must only had one interfaces!");
         }
         // todo 这个为什么不放在batchExportUrl()方法中？
-        if (registryService == null) {
-            registryService = new ZookeeperRegister(serverConfig.getRegisterAddr());
+        if (REGISTRY_SERVICE == null) {
+            REGISTRY_SERVICE = new ZookeeperRegister(serverConfig.getRegisterAddr());
         }
         //默认选择该对象的第一个实现接口
         Class interfaceClass = classes[0];
@@ -85,6 +85,7 @@ public class Server {
         url.setApplicationName(serverConfig.getApplicationName());
         url.addParameter("host", CommonUtils.getIpAddress());
         url.addParameter("port", String.valueOf(serverConfig.getServerPort()));
+        // 加入缓存，后续在batchExportUrl中处理，注册到zk中
         PROVIDER_URL_SET.add(url);
     }
 
@@ -100,7 +101,7 @@ public class Server {
             }
             for (URL url : PROVIDER_URL_SET) {
                 // 服务端注册服务接口
-                registryService.register(url);
+                REGISTRY_SERVICE.register(url);
             }
         });
         task.start();
@@ -115,6 +116,8 @@ public class Server {
         Server server = new Server();
         // 初始化服务配置
         server.initServerConfig();
+        iRpcListenerLoader = new IRpcListenerLoader();
+        iRpcListenerLoader.init();
         // 暴露服务提供者接口
         server.exportService(new DataServiceImpl());
         // 启动服务

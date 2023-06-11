@@ -101,9 +101,13 @@ public class Client {
 
     public static void main(String[] args) throws Throwable {
         Client client = new Client();
+        // 初始化客户端网络服务器以及客户端代理
         RpcReference rpcReference = client.initClientApplication();
+        // 初始化客户端路由
         client.initClientConfig();
+        // 获得代理对象
         DataService dataService = rpcReference.get(DataService.class);
+        // 订阅相关服务接口
         client.doSubscribeService(DataService.class);
         ConnectionHandler.setBootstrap(client.getBootstrap());
         // 连接服务提供者
