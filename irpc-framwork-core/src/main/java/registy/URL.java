@@ -1,11 +1,13 @@
 package registy;
 
+import cn.hutool.core.lang.Console;
 import lombok.Data;
 import registy.zookeeper.ProviderNodeInfo;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+
 @Data
 public class URL {
     /**
@@ -40,7 +42,7 @@ public class URL {
     public static String buildProviderUrlStr(URL url) {
         String host = url.getParameters().get("host");
         String port = url.getParameters().get("port");
-        return new String((url.getApplicationName() + ";" + url.getServiceName() + ";" + host + ":" + port + ";" + System.currentTimeMillis()).getBytes(), StandardCharsets.UTF_8);
+        return new String((url.getApplicationName() + ";" + url.getServiceName() + ";" + host + ":" + port + ";" + System.currentTimeMillis() + ";100").getBytes(), StandardCharsets.UTF_8);
     }
 
     /**
@@ -64,8 +66,15 @@ public class URL {
     public static ProviderNodeInfo buildURLFromUrlStr(String providerNodeStr) {
         String[] items = providerNodeStr.split("/");
         ProviderNodeInfo providerNodeInfo = new ProviderNodeInfo();
-        providerNodeInfo.setServiceName(items[2]);
-        providerNodeInfo.setAddress(items[4]);
+        providerNodeInfo.setServiceName(items[1]);
+        providerNodeInfo.setAddress(items[2]);
+        providerNodeInfo.setRegistryTime(items[3]);
+        providerNodeInfo.setWeight(Integer.valueOf(items[4]));
         return providerNodeInfo;
+    }
+
+    public static void main(String[] args) {
+        ProviderNodeInfo providerNodeInfo = buildURLFromUrlStr("/irpc/org.idea.irpc.framework.interfaces.DataService/provider/192.168.43.227:9092");
+        Console.log(providerNodeInfo);
     }
 }

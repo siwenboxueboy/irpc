@@ -4,19 +4,20 @@ import cn.hutool.core.collection.CollUtil;
 import common.ChannelFutureWrapper;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
+import lombok.extern.slf4j.Slf4j;
+import router.Selector;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
-import static common.cache.CommonClientCache.CONNECT_MAP;
-import static common.cache.CommonClientCache.SERVER_ADDRESS;
+import static common.cache.CommonClientCache.*;
 
 /**
  * 职责： 当注册中心的节点新增或者移除或者权重变化的时候，这个类主要负责对内存中的url做变更
  * 将连接的建立，断开，按照服务名筛选等功能都封装在了一起，按照单一职责的设计原则，将与连接有关的功能都统一封装在了一起。
  */
+@Slf4j
 public class ConnectionHandler {
 
     /**
@@ -32,6 +33,7 @@ public class ConnectionHandler {
     /**
      * 构建单个连接通道 元操作，既要处理连接，还要统一将连接进行内存存储管理
      * 添加某个服务接口的某个服务提供者
+     *
      * @param providerIp
      * @return
      * @throws InterruptedException
@@ -44,7 +46,7 @@ public class ConnectionHandler {
             throw new RuntimeException("bootstrap can not be null");
         }
         // 格式错误类型的信息
-        if (!providerIp.contains(":")){
+        if (!providerIp.contains(":")) {
             return;
         }
         String[] providerAddress = providerIp.split(":");
@@ -52,6 +54,8 @@ public class ConnectionHandler {
         Integer port = Integer.parseInt(providerAddress[1]);
         // 到底这个channelFuture里面是什么
         ChannelFuture channelFuture = bootstrap.connect(ip, port).sync();
+        String providerURLInfo = URL_MAP.get(providerServiceName).get(providerIp);
+        log.info("providerURLInfo is : {}", providerURLInfo);
         ChannelFutureWrapper channelFutureWrapper = new ChannelFutureWrapper();
         channelFutureWrapper.setChannelFuture(channelFuture);
         channelFutureWrapper.setHost(ip);
@@ -66,17 +70,22 @@ public class ConnectionHandler {
         }
         channelFutureWrappers.add(channelFutureWrapper);
         CONNECT_MAP.put(providerServiceName, channelFutureWrappers);
+        // 路由层生成对某个服务不同服务提供者的调用顺序
+        Selector selector = new Selector();
+        selector.setProviderServiceName(providerServiceName);
+        IROUTER.refreshRouterArr(selector);
     }
 
 
     /**
      * 构建ChannelFuture
+     *
      * @param ip
      * @param port
      * @return
      * @throws InterruptedException
      */
-    public static ChannelFuture createChannelFuture(String ip,Integer port) throws InterruptedException {
+    public static ChannelFuture createChannelFuture(String ip, Integer port) throws InterruptedException {
         ChannelFuture channelFuture = bootstrap.connect(ip, port).sync();
         return channelFuture;
     }
@@ -112,7 +121,9 @@ public class ConnectionHandler {
         if (CollUtil.isEmpty(channelFutureWrappers)) {
             throw new RuntimeException("no provider exist for " + providerServiceName);
         }
-        ChannelFuture channelFuture = channelFutureWrappers.get(new Random().nextInt(channelFutureWrappers.size())).getChannelFuture();
+        Selector selector = new Selector();
+        selector.setProviderServiceName(providerServiceName);
+        ChannelFuture channelFuture = IROUTER.select(selector).getChannelFuture();
         return channelFuture;
     }
 

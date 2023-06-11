@@ -26,11 +26,15 @@ import proxy.jdk.JDKProxyFactory;
 import registy.URL;
 import registy.zookeeper.AbstractRegister;
 import registy.zookeeper.ZookeeperRegister;
+import router.RandomRouterImpl;
+import router.RotateRouterImpl;
 
 import java.util.List;
+import java.util.Map;
 
-import static common.cache.CommonClientCache.SEND_QUEUE;
-import static common.cache.CommonClientCache.SUBSCRIBE_SERVICE_LIST;
+import static common.cache.CommonClientCache.*;
+import static common.constants.RpcConstants.RANDOM_ROUTER_TYPE;
+import static common.constants.RpcConstants.ROTATE_ROUTER_TYPE;
 
 public class Client {
     private Logger logger = LoggerFactory.getLogger(Client.class);
@@ -86,9 +90,19 @@ public class Client {
         return rpcReference;
     }
 
+    private void initClientConfig() {
+        String routerStrategy = clientConfig.getRouterStrategy();
+        if (RANDOM_ROUTER_TYPE.equals(routerStrategy)) {
+            IROUTER = new RandomRouterImpl();
+        } else if (ROTATE_ROUTER_TYPE.equals(routerStrategy)) {
+            IROUTER = new RotateRouterImpl();
+        }
+    }
+
     public static void main(String[] args) throws Throwable {
         Client client = new Client();
         RpcReference rpcReference = client.initClientApplication();
+        client.initClientConfig();
         DataService dataService = rpcReference.get(DataService.class);
         client.doSubscribeService(DataService.class);
         ConnectionHandler.setBootstrap(client.getBootstrap());
@@ -121,6 +135,8 @@ public class Client {
         url.setApplicationName(clientConfig.getApplicationName());
         url.setServiceName(serviceBean.getName());
         url.addParameter("host", CommonUtils.getIpAddress());
+        Map<String, String> result = abstractRegister.getServiceWeightMap(serviceBean.getName());
+        URL_MAP.put(serviceBean.getName(), result);
         abstractRegister.subscribe(url);
     }
 
@@ -128,17 +144,18 @@ public class Client {
      * 开始和各个provider建立连接
      */
     public void doConnectServer() {
-        for (String providerServiceName : SUBSCRIBE_SERVICE_LIST) {
-            List<String> providerIps = abstractRegister.getProviderIps(providerServiceName);
+        for (URL providerURL : SUBSCRIBE_SERVICE_LIST) {
+            List<String> providerIps = abstractRegister.getProviderIps(providerURL.getServiceName());
             for (String providerIp : providerIps) {
                 try {
-                    ConnectionHandler.connect(providerServiceName, providerIp);
+                    ConnectionHandler.connect(providerURL.getServiceName(), providerIp);
                 } catch (InterruptedException e) {
                     logger.error("[doConnectServer] connect fail ", e);
                 }
             }
             URL url = new URL();
-            url.setServiceName(providerServiceName);
+            url.addParameter("servicePath", providerURL.getServiceName() + "/provider");
+            url.addParameter("providerIps", JSON.toJSONString(providerIps));
             //客户端在此新增一个订阅的功能
             // 为什么要在这里做这个事情？ 上面connect连接了提供者，这里要监听提供者是否下线，如果下线了，客户端要主动断开连接
             abstractRegister.doAfterSubscribe(url);

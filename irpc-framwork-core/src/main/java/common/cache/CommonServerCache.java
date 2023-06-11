@@ -1,6 +1,7 @@
 package common.cache;
 
 import cn.hutool.core.map.MapUtil;
+import registy.RegistryService;
 import registy.URL;
 
 import java.util.HashSet;
@@ -12,4 +13,6 @@ public class CommonServerCache {
     public static final Map<String, Object> PROVIDER_CLASS_MAP = MapUtil.newHashMap();
 
     public static final Set<URL> PROVIDER_URL_SET = new HashSet<>();
+
+    public static RegistryService REGISTRY_SERVICE;
 }

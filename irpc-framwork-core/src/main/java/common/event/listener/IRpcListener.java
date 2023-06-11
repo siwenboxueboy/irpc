@@ -1,4 +1,4 @@
-package common.event;
+package common.event.listener;
 
 /**
  * 监听器接口

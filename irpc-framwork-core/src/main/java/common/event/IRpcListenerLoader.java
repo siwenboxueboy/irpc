@@ -1,7 +1,12 @@
 package common.event;
 
 import cn.hutool.core.collection.CollUtil;
+import common.event.listener.IRpcListener;
+import common.event.listener.ProviderNodeDataChangeListener;
+import common.event.listener.ServiceDestroyListener;
 import common.event.listener.ServiceUpdateListener;
+import common.utils.CommonUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -13,6 +18,7 @@ import java.util.concurrent.Executors;
 /**
  *
  */
+@Slf4j
 public class IRpcListenerLoader {
 
     // 注册的监听器集合
@@ -28,6 +34,8 @@ public class IRpcListenerLoader {
     public void init() {
         // 初始化时将处理事件的监听器加入
         registerListener(new ServiceUpdateListener());
+        registerListener(new ServiceDestroyListener());
+        registerListener(new ProviderNodeDataChangeListener());
     }
 
     /**
@@ -43,6 +51,28 @@ public class IRpcListenerLoader {
             return (Class<?>) type;
         }
         return null;
+    }
+
+    /**
+     * 同步事件处理，可能会堵塞
+     *
+     * @param iRpcEvent
+     */
+    public static void sendSyncEvent(IRpcEvent iRpcEvent) {
+        log.debug("iRpcListenerList:{}", iRpcListenerList);
+        if (CommonUtils.isEmptyList(iRpcListenerList)) {
+            return;
+        }
+        for (IRpcListener<?> iRpcListener : iRpcListenerList) {
+            Class<?> type = getInterfaceT(iRpcListener);
+            if (type.equals(iRpcEvent.getClass())) {
+                try {
+                    iRpcListener.callBack(iRpcEvent.getData());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public static void sendEvent(IRpcEvent iRpcEvent) {

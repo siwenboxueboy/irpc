@@ -1,34 +1,25 @@
 package common;
 
 import io.netty.channel.ChannelFuture;
+import lombok.Data;
+import lombok.ToString;
 
+@Data
+@ToString
 public class ChannelFutureWrapper {
 
     private String host;
     private Integer port;
     private ChannelFuture channelFuture;
+    // 权重 权重值约定好配置是100的整倍数 权重越大则该提供者可用性更好
+    private Integer weight;
 
-    public String getHost() {
-        return host;
+    public ChannelFutureWrapper() {
     }
 
-    public void setHost(String host) {
+    public ChannelFutureWrapper(String host, Integer port, Integer weight) {
         this.host = host;
-    }
-
-    public Integer getPort() {
-        return port;
-    }
-
-    public void setPort(int port) {
         this.port = port;
-    }
-
-    public void setChannelFuture(ChannelFuture channelFuture) {
-        this.channelFuture = channelFuture;
-    }
-
-    public ChannelFuture getChannelFuture() {
-        return channelFuture;
+        this.weight = weight;
     }
 }

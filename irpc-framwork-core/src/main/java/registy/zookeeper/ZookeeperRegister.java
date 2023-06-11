@@ -1,21 +1,21 @@
 package registy.zookeeper;
 
-import common.event.IRpcEvent;
-import common.event.IRpcListenerLoader;
-import common.event.IRpcUpdateEvent;
-import common.event.URLChangeWrapper;
+import com.alibaba.fastjson.JSON;
+import common.event.*;
 import interfaces.DataService;
 import org.apache.zookeeper.Watcher;
 import registy.RegistryService;
 import registy.URL;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 服务端 注册 取消
  * 客户端 订阅 取消订阅
  * 订阅范围：
- * */
+ */
 public class ZookeeperRegister extends AbstractRegister implements RegistryService {
 
     private AbstractZookeeperClient zkClient;
@@ -36,10 +36,40 @@ public class ZookeeperRegister extends AbstractRegister implements RegistryServi
     public void doAfterSubscribe(URL url) {
         // 客户端订阅之后做的事情
         // 监听是否有新的服务注册
-        String newServerNodePath = ROOT + "/" + url.getServiceName() + "/provider";
+        String servicePath = url.getParameters().get("servicePath");
+        String newServerNodePath = ROOT + "/" + servicePath;
         watchChildNodeData(newServerNodePath);
+
+
+        // 某个服务权重的更新
+        String providerIpStrJson = url.getParameters().get("providerIps");
+        List<String> providerIpList = JSON.parseObject(providerIpStrJson, List.class);
+        for (String providerIp : providerIpList) {
+            this.watchNodeDataChange(ROOT + "/" + servicePath + "/" + providerIp);
+        }
     }
 
+    /**
+     * 订阅服务节点内部的数据变化
+     * 用于处理节点权重的更新
+     * @param newServerNodePath
+     */
+    public void watchNodeDataChange(String newServerNodePath) {
+        zkClient.watchNodeData(newServerNodePath, watchedEvent -> {
+            String path = watchedEvent.getPath();
+            String nodeData = zkClient.getNodeData(path);
+            nodeData = nodeData.replace(";","/");
+            ProviderNodeInfo providerNodeInfo = URL.buildURLFromUrlStr(nodeData);
+            IRpcEvent iRpcEvent = new IRpcNodeChangeEvent(providerNodeInfo);
+            IRpcListenerLoader.sendEvent(iRpcEvent);
+            watchNodeDataChange(newServerNodePath);
+        });
+    }
+
+    /**
+     * 订阅服务孩子节点的数据变化
+     * 用于监听处理某个服务接口的某个服务提供者的上下线
+     * */
     public void watchChildNodeData(String newServerNodePath) {
         Watcher watcher = watchedEvent -> {
             System.out.println(watchedEvent);
@@ -84,12 +114,30 @@ public class ZookeeperRegister extends AbstractRegister implements RegistryServi
     }
 
     /**
+     * 获取服务的权重信息
+     *
+     * @param serviceName
+     * @return <ip:port --> urlString>,<ip:port --> urlString>,<ip:port --> urlString>,<ip:port --> urlString>
+     */
+    @Override
+    public Map<String, String> getServiceWeightMap(String serviceName) {
+        List<String> nodeDataList = this.zkClient.getChildrenData(ROOT + "/" + serviceName + "/provider");
+        Map<String, String> result = new HashMap<>();
+        for (String ipAndHost : nodeDataList) {
+            String childData = this.zkClient.getNodeData(ROOT + "/" + serviceName + "/provider/" + ipAndHost);
+            result.put(ipAndHost, childData);
+        }
+        return result;
+    }
+
+    /**
      * 注册url
      * <p>
      * 将irpc服务写入注册中心节点
      * 当出现网络抖动的时候需要进行适当的重试做法
      * 注册服务url的时候需要写入持久化文件中
      * 服务注册的范围：服务类的提供者及其IP端口
+     *
      * @param url
      */
     @Override

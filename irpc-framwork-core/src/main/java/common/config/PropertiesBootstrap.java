@@ -12,6 +12,7 @@ public class PropertiesBootstrap {
     public static final String REGISTER_ADDRESS = "irpc.registerAddr";
     public static final String APPLICATION_NAME = "irpc.applicationName";
     public static final String PROXY_TYPE = "irpc.proxyType";
+    public static final String PROXY_ROUTER_STRATEGY = "irpc.routerStrategy";
 
     /**
      * 服务提供者配置
@@ -42,6 +43,7 @@ public class PropertiesBootstrap {
         clientConfig.setApplicationName(PropertiesLoader.getPropertiesStr(APPLICATION_NAME));
         clientConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
         clientConfig.setProxyType(PropertiesLoader.getPropertiesStr(PROXY_TYPE));
+        clientConfig.setRouterStrategy(PropertiesLoader.getPropertiesStr(PROXY_ROUTER_STRATEGY));
         return clientConfig;
     }
 }
