@@ -8,6 +8,7 @@ import common.config.PropertiesBootstrap;
 import common.config.ServerConfig;
 import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
+import enums.SerializeEnum;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -18,7 +19,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import registy.RegistryService;
 import registy.URL;
 import registy.zookeeper.ZookeeperRegister;
 
@@ -110,6 +110,9 @@ public class Server {
     private void initServerConfig() {
         ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
         this.setServerConfig(serverConfig);
+        // 设置服务端序列化方式
+        SerializeEnum serverSerialize = serverConfig.getServerSerialize();
+        SERVER_SERIALIZE_FACTORY = SerializeEnum.getSerializeFactory(serverSerialize);
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -120,6 +123,7 @@ public class Server {
         iRpcListenerLoader.init();
         // 暴露服务提供者接口
         server.exportService(new DataServiceImpl());
+        ApplicationShutdownHook.registryShutdownHook();
         // 启动服务
         server.startApplication();
         log.info("启动成功");

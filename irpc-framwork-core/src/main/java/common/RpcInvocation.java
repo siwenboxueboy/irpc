@@ -2,11 +2,14 @@ package common;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 自定义协议中content的消息体
  */
 @Data
-public class RpcInvocation {
+public class RpcInvocation implements Serializable {
+
     //请求的目标方法，例如findUser
     private String targetMethod;
     //请求的目标服务名称，例如：com.sise.user.UserService

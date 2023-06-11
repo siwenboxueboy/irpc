@@ -1,6 +1,5 @@
 package common.config;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 
@@ -73,5 +72,10 @@ public class PropertiesLoader {
             propertiesMap.put(key, value);
         }
         return Integer.valueOf(propertiesMap.get(key));
+    }
+
+    public static String getPropertiesStrDefault(String key, String defaultVal) {
+        String val = getPropertiesStr(key);
+        return val == null || val.equals("") ? defaultVal : val;
     }
 }

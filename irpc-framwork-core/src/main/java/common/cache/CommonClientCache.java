@@ -6,6 +6,7 @@ import common.RpcInvocation;
 import common.config.ClientConfig;
 import registy.URL;
 import router.IRouter;
+import serialize.SerializeFactory;
 
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -88,4 +89,12 @@ public class CommonClientCache {
      *
      * */
     public static IRouter IROUTER;
+
+    // ===========================serialize=======================
+    /**
+     * 重要缓存<br>
+     * 全局定义的客户端序列化工厂<br>
+     *
+     * */
+    public static SerializeFactory CLIENT_SERIALIZE_FACTORY;
 }

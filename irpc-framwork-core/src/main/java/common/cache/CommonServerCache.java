@@ -3,6 +3,7 @@ package common.cache;
 import cn.hutool.core.map.MapUtil;
 import registy.RegistryService;
 import registy.URL;
+import serialize.SerializeFactory;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -26,4 +27,12 @@ public class CommonServerCache {
     public static final Set<URL> PROVIDER_URL_SET = new HashSet<>();
 
     public static RegistryService REGISTRY_SERVICE;
+
+    // ===========================serialize=======================
+    /**
+     * 重要缓存<br>
+     * 全局定义的客户端序列化工厂<br>
+     *
+     * */
+    public static SerializeFactory SERVER_SERIALIZE_FACTORY;
 }

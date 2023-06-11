@@ -9,6 +9,7 @@ import common.config.ClientConfig;
 import common.config.PropertiesBootstrap;
 import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
+import enums.SerializeEnum;
 import interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -91,12 +92,22 @@ public class Client {
     }
 
     private void initClientConfig() {
+        //初始化路由策略
+
         String routerStrategy = clientConfig.getRouterStrategy();
-        if (RANDOM_ROUTER_TYPE.equals(routerStrategy)) {
-            IROUTER = new RandomRouterImpl();
-        } else if (ROTATE_ROUTER_TYPE.equals(routerStrategy)) {
-            IROUTER = new RotateRouterImpl();
+        switch (routerStrategy) {
+            case RANDOM_ROUTER_TYPE:
+                IROUTER = new RandomRouterImpl();
+                break;
+            case ROTATE_ROUTER_TYPE:
+                IROUTER = new RotateRouterImpl();
+                break;
+            default:
+                throw new RuntimeException("no match routerStrategy for" + routerStrategy);
         }
+        // 设置客户端序列化方式
+        SerializeEnum clientSerialize = clientConfig.getClientSerialize();
+        CLIENT_SERIALIZE_FACTORY = SerializeEnum.getSerializeFactory(clientSerialize);
     }
 
     public static void main(String[] args) throws Throwable {
@@ -192,8 +203,7 @@ public class Client {
                     // 阻塞模式 阻塞队列
                     RpcInvocation data = SEND_QUEUE.take();
                     // 将RpcInvocation封装到RpcProtocol对象中，然后发送给服务端，这里正好对应了上文中的ServerHandler
-                    String json = JSON.toJSONString(data);
-                    RpcProtocol rpcProtocol = new RpcProtocol(json.getBytes());
+                    RpcProtocol rpcProtocol = new RpcProtocol(CLIENT_SERIALIZE_FACTORY.serialize(data));
                     // netty的通道负责发送数据给服务端
                     ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(data.getTargetServiceName());
                     channelFuture.channel().writeAndFlush(rpcProtocol);

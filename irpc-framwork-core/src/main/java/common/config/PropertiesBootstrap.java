@@ -1,10 +1,12 @@
 package common.config;
 
+import enums.SerializeEnum;
+
 import java.io.IOException;
 
 /**
  * 这个对象主要是负责将properties的配置转换成本地的一个Map结构进行管理
- * */
+ */
 public class PropertiesBootstrap {
     private volatile boolean configIsReady;
 
@@ -14,9 +16,13 @@ public class PropertiesBootstrap {
     public static final String PROXY_TYPE = "irpc.proxyType";
     public static final String PROXY_ROUTER_STRATEGY = "irpc.routerStrategy";
 
+    public static final String SERVER_SERIALIZE_TYPE = "irpc.serverSerialize";
+
+    public static final String CLIENT_SERIALIZE_TYPE = "irpc.clientSerialize";
+
     /**
      * 服务提供者配置
-     * */
+     */
     public static ServerConfig loadServerConfigFromLocal() {
         try {
             PropertiesLoader.loadConfiguration();
@@ -27,13 +33,14 @@ public class PropertiesBootstrap {
         serverConfig.setServerPort(PropertiesLoader.getPropertiesInteger(SERVER_PORT));
         serverConfig.setApplicationName(PropertiesLoader.getPropertiesStr(APPLICATION_NAME));
         serverConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
+        serverConfig.setServerSerialize(SerializeEnum.valueOf(PropertiesLoader.getPropertiesStrDefault(SERVER_SERIALIZE_TYPE, SerializeEnum.JDK.name())));
         return serverConfig;
     }
 
     /**
      * 服务消费者配置
-     * */
-    public static ClientConfig loadClientConfigFromLocal(){
+     */
+    public static ClientConfig loadClientConfigFromLocal() {
         try {
             PropertiesLoader.loadConfiguration();
         } catch (IOException e) {
@@ -44,6 +51,7 @@ public class PropertiesBootstrap {
         clientConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
         clientConfig.setProxyType(PropertiesLoader.getPropertiesStr(PROXY_TYPE));
         clientConfig.setRouterStrategy(PropertiesLoader.getPropertiesStr(PROXY_ROUTER_STRATEGY));
+        clientConfig.setClientSerialize(SerializeEnum.valueOf(PropertiesLoader.getPropertiesStrDefault(CLIENT_SERIALIZE_TYPE, SerializeEnum.JDK.name())));
         return clientConfig;
     }
 }

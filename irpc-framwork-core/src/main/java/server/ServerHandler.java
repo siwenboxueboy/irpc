@@ -11,6 +11,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import static common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
+import static common.cache.CommonServerCache.SERVER_SERIALIZE_FACTORY;
 
 /**
  * RpcDecoder解码之后的处理
@@ -22,8 +23,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws InvocationTargetException, IllegalAccessException {
         //服务端接收数据的时候统一以RpcProtocol协议的格式接收，具体的发送逻辑见文章下方客户端发送部分
         RpcProtocol rpcProtocol = (RpcProtocol) msg;
-        String json = new String(rpcProtocol.getContent(), 0, rpcProtocol.getContentLength());
-        RpcInvocation rpcInvocation = JSON.parseObject(json, RpcInvocation.class);
+        // 反序列化请求
+        RpcInvocation rpcInvocation = SERVER_SERIALIZE_FACTORY.deserialize(rpcProtocol.getContent(), RpcInvocation.class);
         //这里的PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合
         Object aimObject = PROVIDER_CLASS_MAP.get(rpcInvocation.getTargetServiceName());
         Method[] methods = aimObject.getClass().getDeclaredMethods();
@@ -41,7 +42,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         }
         // 请求完成，设置
         rpcInvocation.setResponse(result);
-        RpcProtocol respRpcProtocol = new RpcProtocol(JSON.toJSONString(rpcInvocation).getBytes());
+        // 序列化执行结果
+        RpcProtocol respRpcProtocol = new RpcProtocol(SERVER_SERIALIZE_FACTORY.serialize(rpcInvocation));
         // 回复给客户端结果
         ctx.writeAndFlush(respRpcProtocol);
     }
