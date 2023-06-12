@@ -1,5 +1,6 @@
 package common.cache;
 
+import filter.client.ClientFilterChain;
 import common.ChannelFuturePollingRef;
 import common.ChannelFutureWrapper;
 import common.RpcInvocation;
@@ -97,4 +98,9 @@ public class CommonClientCache {
      *
      * */
     public static SerializeFactory CLIENT_SERIALIZE_FACTORY;
+    // ===========================filter=======================
+    /**
+     * 过滤链的实例
+     * */
+    public static ClientFilterChain CLIENT_FILTER_CHAIN;
 }

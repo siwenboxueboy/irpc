@@ -7,9 +7,14 @@ import common.RpcInvocation;
 import common.RpcProtocol;
 import common.config.ClientConfig;
 import common.config.PropertiesBootstrap;
+import common.constants.RpcConstants;
 import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
 import enums.SerializeEnum;
+import filter.client.ClientFilterChain;
+import filter.client.ClientLogFilterImpl;
+import filter.client.DirectInvokeFilterImpl;
+import filter.client.GroupFilterImpl;
 import interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -20,8 +25,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.Getter;
 import lombok.Setter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import proxy.javassist.JavassistProxyFactory;
 import proxy.jdk.JDKProxyFactory;
 import registy.URL;
@@ -37,8 +41,8 @@ import static common.cache.CommonClientCache.*;
 import static common.constants.RpcConstants.RANDOM_ROUTER_TYPE;
 import static common.constants.RpcConstants.ROTATE_ROUTER_TYPE;
 
+@Slf4j
 public class Client {
-    private Logger logger = LoggerFactory.getLogger(Client.class);
 
     public static EventLoopGroup clientGroup = new NioEventLoopGroup();
 
@@ -81,9 +85,10 @@ public class Client {
         iRpcListenerLoader.init();
 
         this.clientConfig = PropertiesBootstrap.loadClientConfigFromLocal();
+        CLIENT_CONFIG = this.clientConfig;
         RpcReference rpcReference;
 
-        if ("javassist".equals(clientConfig.getProxyType())) {
+        if (RpcConstants.JAVASSIST_PROXY_TYPE.equals(clientConfig.getProxyType())) {
             rpcReference = new RpcReference(new JavassistProxyFactory());
         } else {
             rpcReference = new RpcReference(new JDKProxyFactory());
@@ -108,33 +113,13 @@ public class Client {
         // 设置客户端序列化方式
         SerializeEnum clientSerialize = clientConfig.getClientSerialize();
         CLIENT_SERIALIZE_FACTORY = SerializeEnum.getSerializeFactory(clientSerialize);
-    }
 
-    public static void main(String[] args) throws Throwable {
-        Client client = new Client();
-        // 初始化客户端网络服务器以及客户端代理
-        RpcReference rpcReference = client.initClientApplication();
-        // 初始化客户端路由
-        client.initClientConfig();
-        // 获得代理对象
-        DataService dataService = rpcReference.get(DataService.class);
-        // 订阅相关服务接口
-        client.doSubscribeService(DataService.class);
-        ConnectionHandler.setBootstrap(client.getBootstrap());
-        // 连接服务提供者
-        client.doConnectServer();
-        // 启动异步IO发送数据线程
-        client.startClient();
-
-        for (int i = 0; i < 100; i++) {
-            try {
-                String result = dataService.sendData("test");
-                System.out.println(result);
-                Thread.sleep(1000);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        // 初始化过滤链 指定过滤的顺序
+        ClientFilterChain clientFilterChain = new ClientFilterChain();
+        clientFilterChain.addClientFilter(new DirectInvokeFilterImpl());
+        clientFilterChain.addClientFilter(new GroupFilterImpl());
+        clientFilterChain.addClientFilter(new ClientLogFilterImpl());
+        CLIENT_FILTER_CHAIN = clientFilterChain;
     }
 
     /**
@@ -165,7 +150,7 @@ public class Client {
                 try {
                     ConnectionHandler.connect(providerURL.getServiceName(), providerIp);
                 } catch (InterruptedException e) {
-                    logger.error("[doConnectServer] connect fail ", e);
+                    log.error("[doConnectServer] connect fail ", e);
                 }
             }
             URL url = new URL();
@@ -201,15 +186,50 @@ public class Client {
             while (true) {
                 try {
                     // 阻塞模式 阻塞队列
-                    RpcInvocation data = SEND_QUEUE.take();
+                    RpcInvocation rpcInvocation = SEND_QUEUE.take();
                     // 将RpcInvocation封装到RpcProtocol对象中，然后发送给服务端，这里正好对应了上文中的ServerHandler
-                    RpcProtocol rpcProtocol = new RpcProtocol(CLIENT_SERIALIZE_FACTORY.serialize(data));
+
                     // netty的通道负责发送数据给服务端
-                    ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(data.getTargetServiceName());
-                    channelFuture.channel().writeAndFlush(rpcProtocol);
+                    ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(rpcInvocation);
+                    if (channelFuture != null){
+                        RpcProtocol rpcProtocol = new RpcProtocol(CLIENT_SERIALIZE_FACTORY.serialize(rpcInvocation));
+                        channelFuture.channel().writeAndFlush(rpcProtocol);
+                    }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Throwable {
+        Client client = new Client();
+        // 初始化客户端网络服务器以及客户端代理
+        RpcReference rpcReference = client.initClientApplication();
+        // 初始化客户端路由
+        client.initClientConfig();
+
+        RpcReferenceWrapper<DataService> rpcReferenceWrapper = new RpcReferenceWrapper<>();
+        rpcReferenceWrapper.setAimClass(DataService.class);
+        rpcReferenceWrapper.setGroup("dev");
+        rpcReferenceWrapper.setServiceToken("token-a");
+        // 获得代理对象
+        DataService dataService = rpcReference.get(rpcReferenceWrapper);
+        // 订阅相关服务接口
+        client.doSubscribeService(DataService.class);
+        ConnectionHandler.setBootstrap(client.getBootstrap());
+        // 连接服务提供者
+        client.doConnectServer();
+        // 启动异步IO发送数据线程
+        client.startClient();
+
+        for (int i = 0; i < 100; i++) {
+            try {
+                String result = dataService.sendData("test");
+                System.out.println(result);
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }

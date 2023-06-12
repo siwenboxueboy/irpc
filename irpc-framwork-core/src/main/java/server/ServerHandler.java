@@ -1,6 +1,5 @@
 package server;
 
-import com.alibaba.fastjson.JSON;
 import common.RpcInvocation;
 import common.RpcProtocol;
 import io.netty.channel.Channel;
@@ -10,8 +9,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import static common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
-import static common.cache.CommonServerCache.SERVER_SERIALIZE_FACTORY;
+import static common.cache.CommonServerCache.*;
 
 /**
  * RpcDecoder解码之后的处理
@@ -25,6 +23,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         RpcProtocol rpcProtocol = (RpcProtocol) msg;
         // 反序列化请求
         RpcInvocation rpcInvocation = SERVER_SERIALIZE_FACTORY.deserialize(rpcProtocol.getContent(), RpcInvocation.class);
+        //执行过滤链路
+        SERVER_FILTER_CHAIN.doFilter(rpcInvocation);
         //这里的PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合
         Object aimObject = PROVIDER_CLASS_MAP.get(rpcInvocation.getTargetServiceName());
         Method[] methods = aimObject.getClass().getDeclaredMethods();

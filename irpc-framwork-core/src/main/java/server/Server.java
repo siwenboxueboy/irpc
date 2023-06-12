@@ -9,6 +9,9 @@ import common.config.ServerConfig;
 import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
 import enums.SerializeEnum;
+import filter.server.ServerFilterChain;
+import filter.server.ServerLogFilterImpl;
+import filter.server.ServerTokenFilterImpl;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -63,7 +66,8 @@ public class Server {
     /**
      * 服务提供者设置要暴露的服务接口信息
      */
-    public void exportService(Object serviceBean) {
+    public void exportService(ServiceWrapper serviceWrapper) {
+        Object serviceBean = serviceWrapper.getServiceObj();
         if (serviceBean.getClass().getInterfaces().length == 0) {
             throw new RuntimeException("service must had interfaces!");
         }
@@ -85,8 +89,15 @@ public class Server {
         url.setApplicationName(serverConfig.getApplicationName());
         url.addParameter("host", CommonUtils.getIpAddress());
         url.addParameter("port", String.valueOf(serverConfig.getServerPort()));
+        url.addParameter("group", String.valueOf(serviceWrapper.getGroup()));
+        url.addParameter("limit", String.valueOf(serviceWrapper.getLimit()));
         // 加入缓存，后续在batchExportUrl中处理，注册到zk中
         PROVIDER_URL_SET.add(url);
+
+        // 服务端token不空 则要每次都校验token
+        if (CommonUtils.isNotEmpty(serviceWrapper.getServiceToken())) {
+            PROVIDER_SERVICE_WRAPPER_MAP.put(interfaceClass.getName(), serviceWrapper);
+        }
     }
 
     /**
@@ -110,9 +121,16 @@ public class Server {
     private void initServerConfig() {
         ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
         this.setServerConfig(serverConfig);
+        SERVER_CONFIG = serverConfig;
         // 设置服务端序列化方式
         SerializeEnum serverSerialize = serverConfig.getServerSerialize();
         SERVER_SERIALIZE_FACTORY = SerializeEnum.getSerializeFactory(serverSerialize);
+
+        // 服务端责任链初始化
+        ServerFilterChain serverFilterChain = new ServerFilterChain();
+        serverFilterChain.addServerFilter(new ServerLogFilterImpl());
+        serverFilterChain.addServerFilter(new ServerTokenFilterImpl());
+        SERVER_FILTER_CHAIN = serverFilterChain;
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -122,7 +140,10 @@ public class Server {
         iRpcListenerLoader = new IRpcListenerLoader();
         iRpcListenerLoader.init();
         // 暴露服务提供者接口
-        server.exportService(new DataServiceImpl());
+        ServiceWrapper dataServiceServiceWrapper = new ServiceWrapper(new DataServiceImpl(), "dev");
+        dataServiceServiceWrapper.setServiceToken("token-a");
+        dataServiceServiceWrapper.setLimit(2);
+        server.exportService(dataServiceServiceWrapper);
         ApplicationShutdownHook.registryShutdownHook();
         // 启动服务
         server.startApplication();

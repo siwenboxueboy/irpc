@@ -1,5 +1,6 @@
 package proxy.jdk;
 
+import client.RpcReferenceWrapper;
 import common.RpcInvocation;
 
 import java.lang.reflect.InvocationHandler;
@@ -14,10 +15,10 @@ public class JDKClientInvocationHandler implements InvocationHandler {
 
     private final static Object OBJECT = new Object();
 
-    private Class<?> clazz;
+    private RpcReferenceWrapper rpcReferenceWrapper;
 
-    public JDKClientInvocationHandler(Class<?> clazz) {
-        this.clazz = clazz;
+    public JDKClientInvocationHandler(RpcReferenceWrapper rpcReferenceWrapper) {
+        this.rpcReferenceWrapper = rpcReferenceWrapper;
     }
 
     /**
@@ -29,9 +30,10 @@ public class JDKClientInvocationHandler implements InvocationHandler {
         RpcInvocation rpcInvocation = new RpcInvocation();
         rpcInvocation.setArgs(args);
         rpcInvocation.setTargetMethod(method.getName());
-        rpcInvocation.setTargetServiceName(clazz.getName());
+        rpcInvocation.setTargetServiceName(rpcReferenceWrapper.getAimClass().getName());
         //这里面注入了一个uuid，对每一次的请求都做单独区分，方便我们在客户端接收数据的时候进行识别
         rpcInvocation.setUuid(UUID.randomUUID().toString());
+        rpcInvocation.setAttachments(rpcReferenceWrapper.getAttatchments());
         // 将其放入map，方便后面响应获取
         RESP_MAP.put(rpcInvocation.getUuid(), OBJECT);
 

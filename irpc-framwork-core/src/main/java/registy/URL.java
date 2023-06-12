@@ -42,7 +42,8 @@ public class URL {
     public static String buildProviderUrlStr(URL url) {
         String host = url.getParameters().get("host");
         String port = url.getParameters().get("port");
-        return new String((url.getApplicationName() + ";" + url.getServiceName() + ";" + host + ":" + port + ";" + System.currentTimeMillis() + ";100").getBytes(), StandardCharsets.UTF_8);
+        String group = url.getParameters().get("group");
+        return new String((url.getApplicationName() + ";" + url.getServiceName() + ";" + host + ":" + port + ";" + System.currentTimeMillis() + ";100;" + group).getBytes(), StandardCharsets.UTF_8);
     }
 
     /**
@@ -64,17 +65,19 @@ public class URL {
      * @return
      */
     public static ProviderNodeInfo buildURLFromUrlStr(String providerNodeStr) {
-        String[] items = providerNodeStr.split("/");
+        String[] items = providerNodeStr.split(";");
         ProviderNodeInfo providerNodeInfo = new ProviderNodeInfo();
+        providerNodeInfo.setApplicationName(items[0]);
         providerNodeInfo.setServiceName(items[1]);
         providerNodeInfo.setAddress(items[2]);
         providerNodeInfo.setRegistryTime(items[3]);
         providerNodeInfo.setWeight(Integer.valueOf(items[4]));
+        providerNodeInfo.setGroup(String.valueOf(items[5]));
         return providerNodeInfo;
     }
 
     public static void main(String[] args) {
-        ProviderNodeInfo providerNodeInfo = buildURLFromUrlStr("/irpc/org.idea.irpc.framework.interfaces.DataService/provider/192.168.43.227:9092");
+        ProviderNodeInfo providerNodeInfo = buildURLFromUrlStr("/irpc/org.idea.irpc.framework.interfaces.DataService/provider/192.168.43.227:9092;1643429082637;100;default");
         Console.log(providerNodeInfo);
     }
 }

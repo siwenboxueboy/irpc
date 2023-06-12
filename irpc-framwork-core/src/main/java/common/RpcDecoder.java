@@ -26,8 +26,8 @@ public class RpcDecoder extends ByteToMessageDecoder {
 //        必须大于等于标准长度才算是正常的包
         if (byteBuf.readableBytes() >= BASE_LENGTH) {
             // 防止收到一些体积过大的数据包
-            // todo why?
-            if (byteBuf.readableBytes() > 1000) {
+            // todo 目前限制在1000大小，后期版本这里是可配置模式 why?为什么要配置 按理说包有很大的
+            if (byteBuf.readableBytes() > 10000) {
                 byteBuf.skipBytes(byteBuf.readableBytes());
             }
 

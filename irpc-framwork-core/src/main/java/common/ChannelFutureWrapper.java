@@ -14,6 +14,8 @@ public class ChannelFutureWrapper {
     // 权重 权重值约定好配置是100的整倍数 权重越大则该提供者可用性更好
     private Integer weight;
 
+    private String group;
+
     public ChannelFutureWrapper() {
     }
 

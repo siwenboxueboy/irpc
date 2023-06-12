@@ -3,13 +3,15 @@ package common;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 自定义协议中content的消息体
  */
 @Data
 public class RpcInvocation implements Serializable {
-
+    private static final long serialVersionUID = -3611379458492006176L;
     //请求的目标方法，例如findUser
     private String targetMethod;
     //请求的目标服务名称，例如：com.sise.user.UserService
@@ -21,4 +23,6 @@ public class RpcInvocation implements Serializable {
     private String uuid;
     //接口响应的数据塞入这个字段中（如果是异步调用或者void类型，这里就为空）
     private Object response;
+    // 附件信息
+    private Map<String, Object> attachments = new ConcurrentHashMap<>();
 }

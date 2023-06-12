@@ -1,5 +1,7 @@
 package proxy;
 
+import client.RpcReferenceWrapper;
+
 public interface ProxyFactory {
-    <T> T getProxy(Class clazz) throws Throwable;
+    <T> T getProxy(RpcReferenceWrapper rpcReferenceWrapper) throws Throwable;
 }
