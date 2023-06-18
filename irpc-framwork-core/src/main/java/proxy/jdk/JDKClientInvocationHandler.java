@@ -40,6 +40,11 @@ public class JDKClientInvocationHandler implements InvocationHandler {
         //这里就是将请求的参数放入到发送队列中，待异步IO线程处理
         SEND_QUEUE.add(rpcInvocation);
 
+        //既然是异步请求，就没有必要再在RESP_MAP中判断是否有响应结果了
+        if (rpcReferenceWrapper.isAsync()) {
+            return null;
+        }
+
         // 客户端请求超时的一个判断依据
         long beginTime = System.currentTimeMillis();
         // 获取客户端响应

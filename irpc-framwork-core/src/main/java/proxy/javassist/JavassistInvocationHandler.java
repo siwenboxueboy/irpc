@@ -32,6 +32,10 @@ public class JavassistInvocationHandler  implements InvocationHandler {
         RESP_MAP.put(rpcInvocation.getUuid(), OBJECT);
         //代理类内部将请求放入到发送队列中，等待发送队列发送请求
         SEND_QUEUE.add(rpcInvocation);
+        //既然是异步请求，就没有必要再在RESP_MAP中判断是否有响应结果了
+        if (rpcReferenceWrapper.isAsync()) {
+            return null;
+        }
         long beginTime = System.currentTimeMillis();
         //如果请求数据在指定时间内返回则返回给客户端调用方
         while (System.currentTimeMillis() - beginTime < 3*1000) {

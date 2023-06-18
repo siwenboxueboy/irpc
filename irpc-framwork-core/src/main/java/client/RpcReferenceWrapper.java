@@ -13,7 +13,11 @@ public class RpcReferenceWrapper<T> {
     private Map<String, Object> attatchments = new ConcurrentHashMap<>();
 
     public boolean isAsync() {
-        return Boolean.valueOf(String.valueOf(attatchments.get("async")));
+        Object r = attatchments.get("async");
+        if (r == null) {
+            return false;
+        }
+        return Boolean.valueOf(true);
     }
 
     public void setAsync(boolean async) {
