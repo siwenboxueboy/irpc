@@ -66,6 +66,8 @@ public class Server {
             }
         });
         this.batchExportUrl();
+        // 开始准备接收请求的任务
+        SERVER_CHANNEL_DISPATCHER.startDataConsume();
         bootstrap.bind(serverConfig.getServerPort()).sync();
         IS_STARTED = true;
     }
@@ -137,7 +139,9 @@ public class Server {
         this.setServerConfig(serverConfig);
         SERVER_CONFIG = serverConfig;
 
-        // 设置服务端序列化方式
+        SERVER_CHANNEL_DISPATCHER.init(SERVER_CONFIG.getServerQueueSize(), SERVER_CONFIG.getServerBizThreadNums());
+
+        // serialize mode setting up
         SerializeEnum serverSerialize = serverConfig.getServerSerialize();
         EXTENSION_LOADER.loadExtension(SerializeFactory.class);
         LinkedHashMap<String, Class> serializeFactoryClassMap = EXTENSION_LOADER_CLASS_CACHE.get(SerializeFactory.class.getName());

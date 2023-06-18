@@ -2,6 +2,7 @@ package common.config;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
+import common.utils.CommonUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -85,5 +86,29 @@ public class PropertiesLoader {
             throw new IllegalArgumentException(key + " 配置为空异常");
         }
         return val;
+    }
+
+    /**
+     * 根据键值获取配置属性
+     *
+     * @param key
+     * @return
+     */
+    public static Integer getPropertiesIntegerDefault(String key,Integer defaultVal) {
+        if (properties == null) {
+            return defaultVal;
+        }
+        if (CommonUtils.isEmpty(key)) {
+            return defaultVal;
+        }
+        String value = properties.getProperty(key);
+        if(value==null){
+            propertiesMap.put(key, String.valueOf(defaultVal));
+            return defaultVal;
+        }
+        if (!propertiesMap.containsKey(key)) {
+            propertiesMap.put(key, value);
+        }
+        return Integer.valueOf(propertiesMap.get(key));
     }
 }

@@ -4,6 +4,8 @@ import enums.SerializeEnum;
 
 import java.io.IOException;
 
+import static common.constants.RpcConstants.*;
+
 /**
  * 这个对象主要是负责将properties的配置转换成本地的一个Map结构进行管理
  */
@@ -21,6 +23,12 @@ public class PropertiesBootstrap {
 
     public static final String CLIENT_SERIALIZE_TYPE = "irpc.clientSerialize";
 
+    public static final String CLIENT_DEFAULT_TIME_OUT = "irpc.client.default.timeout";
+
+    public static final String SERVER_BIZ_THREAD_NUMS = "irpc.server.biz.thread.nums";
+
+    public static final String SERVER_QUEUE_SIZE = "irpc.server.queue.size";
+
     /**
      * 服务提供者配置
      */
@@ -36,6 +44,8 @@ public class PropertiesBootstrap {
         serverConfig.setRegisterType(PropertiesLoader.getPropertiesStr(REGISTER_TYPE));
         serverConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
         serverConfig.setServerSerialize(SerializeEnum.valueOf(PropertiesLoader.getPropertiesStrDefault(SERVER_SERIALIZE_TYPE, SerializeEnum.JDK.name())));
+        serverConfig.setServerBizThreadNums(PropertiesLoader.getPropertiesIntegerDefault(SERVER_BIZ_THREAD_NUMS, DEFAULT_THREAD_NUMS));
+        serverConfig.setServerQueueSize(PropertiesLoader.getPropertiesIntegerDefault(SERVER_QUEUE_SIZE, DEFAULT_QUEUE_SIZE));
         return serverConfig;
     }
 
@@ -55,6 +65,7 @@ public class PropertiesBootstrap {
         clientConfig.setProxyType(PropertiesLoader.getPropertiesStr(PROXY_TYPE));
         clientConfig.setRouterStrategy(PropertiesLoader.getPropertiesStr(PROXY_ROUTER_STRATEGY));
         clientConfig.setClientSerialize(SerializeEnum.valueOf(PropertiesLoader.getPropertiesStrDefault(CLIENT_SERIALIZE_TYPE, SerializeEnum.JDK.name())));
+        clientConfig.setTimeOut(PropertiesLoader.getPropertiesIntegerDefault(CLIENT_DEFAULT_TIME_OUT, DEFAULT_TIMEOUT));
         return clientConfig;
     }
 }

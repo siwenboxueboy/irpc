@@ -2,6 +2,7 @@ package common.cache;
 
 import cn.hutool.core.map.MapUtil;
 import common.config.ServerConfig;
+import dispatcher.ServerChannelDispatcher;
 import filter.server.ServerFilterChain;
 import registy.RegistryService;
 import registy.URL;
@@ -41,13 +42,13 @@ public class CommonServerCache {
 
     public static ServerConfig SERVER_CONFIG;
 
-    // ===========================filter=======================
-    /**
-     * 过滤链的实例
-     */
+    // ===========================filter chain instance=======================
     public static ServerFilterChain SERVER_FILTER_CHAIN;
 
     public static final Map<String, ServiceWrapper> PROVIDER_SERVICE_WRAPPER_MAP = new ConcurrentHashMap<>();
-
+    // ===========================sign server started=======================
     public static Boolean IS_STARTED = false;
+
+    // ===========================server channel dispatcher instance=======================
+    public static ServerChannelDispatcher SERVER_CHANNEL_DISPATCHER = new ServerChannelDispatcher();
 }

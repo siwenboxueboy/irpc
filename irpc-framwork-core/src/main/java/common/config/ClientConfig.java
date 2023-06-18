@@ -20,4 +20,8 @@ public class ClientConfig {
      * 客户端序列化方式 example: hession2,kryo,jdk,fastjson
      */
     private SerializeEnum clientSerialize;
+    /**
+     * 客户端发数据的超时时间
+     */
+    private Integer timeOut;
 }

@@ -3,11 +3,9 @@ package common.constants;
 public class RpcConstants {
     public static final short MAGIC_NUMBER = 1231;
 
-    public static final String JDK_PROXY_TYPE = "jdk";
+    public static final Integer DEFAULT_TIMEOUT = 3000;
 
-    public static final String JAVASSIST_PROXY_TYPE = "javassist";
+    public static final Integer DEFAULT_THREAD_NUMS = 256;
 
-    public static final String RANDOM_ROUTER_TYPE = "random";
-
-    public static final String ROTATE_ROUTER_TYPE = "rotate";
+    public static final Integer DEFAULT_QUEUE_SIZE = 512;
 }
