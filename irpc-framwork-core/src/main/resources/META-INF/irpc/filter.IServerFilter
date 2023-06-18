@@ -1,0 +1,2 @@
+serverLogFilterImpl=filter.server.ServerLogFilterImpl
+serverTokenFilterImpl=filter.server.ServerTokenFilterImpl

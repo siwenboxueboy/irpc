@@ -1,0 +1,3 @@
+clientLogFilterImpl=filter.client.ClientLogFilterImpl
+directInvokeFilterImpl=filter.client.DirectInvokeFilterImpl
+groupFilterImpl=filter.client.GroupFilterImpl

@@ -1,0 +1,2 @@
+jdk=proxy.jdk.JDKProxyFactory
+javassist=proxy.javassist.JavassistProxyFactory

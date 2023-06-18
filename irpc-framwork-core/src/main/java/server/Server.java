@@ -1,7 +1,6 @@
 package server;
 
 
-import cn.hutool.core.lang.Console;
 import common.RpcDecoder;
 import common.RpcEncoder;
 import common.config.PropertiesBootstrap;
@@ -9,9 +8,8 @@ import common.config.ServerConfig;
 import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
 import enums.SerializeEnum;
+import filter.IServerFilter;
 import filter.server.ServerFilterChain;
-import filter.server.ServerLogFilterImpl;
-import filter.server.ServerTokenFilterImpl;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -22,10 +20,18 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import registy.RegistryService;
 import registy.URL;
-import registy.zookeeper.ZookeeperRegister;
+import registy.zookeeper.AbstractRegister;
+import serialize.SerializeFactory;
 
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import static common.cache.CommonClientCache.EXTENSION_LOADER;
 import static common.cache.CommonServerCache.*;
+import static spi.ExtensionLoader.EXTENSION_LOADER_CLASS_CACHE;
 
 @Slf4j
 public class Server {
@@ -53,7 +59,7 @@ public class Server {
         bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                Console.log("初始化provider过程");
+                log.info("初始化provider过程");
                 ch.pipeline().addLast(new RpcEncoder());
                 ch.pipeline().addLast(new RpcDecoder());
                 ch.pipeline().addLast(new ServerHandler());
@@ -61,6 +67,7 @@ public class Server {
         });
         this.batchExportUrl();
         bootstrap.bind(serverConfig.getServerPort()).sync();
+        IS_STARTED = true;
     }
 
     /**
@@ -77,7 +84,14 @@ public class Server {
         }
         // todo 这个为什么不放在batchExportUrl()方法中？
         if (REGISTRY_SERVICE == null) {
-            REGISTRY_SERVICE = new ZookeeperRegister(serverConfig.getRegisterAddr());
+            try {
+                EXTENSION_LOADER.loadExtension(RegistryService.class);
+                Map<String, Class> registryClassMap = EXTENSION_LOADER_CLASS_CACHE.get(RegistryService.class.getName());
+                Class registryClass = registryClassMap.get(serverConfig.getRegisterType());
+                REGISTRY_SERVICE = (AbstractRegister) registryClass.newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("registryServiceType unKnow,error is ", e);
+            }
         }
         //默认选择该对象的第一个实现接口
         Class interfaceClass = classes[0];
@@ -118,22 +132,36 @@ public class Server {
         task.start();
     }
 
-    private void initServerConfig() {
+    private void initServerConfig() throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
         ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
         this.setServerConfig(serverConfig);
         SERVER_CONFIG = serverConfig;
+
         // 设置服务端序列化方式
         SerializeEnum serverSerialize = serverConfig.getServerSerialize();
-        SERVER_SERIALIZE_FACTORY = SerializeEnum.getSerializeFactory(serverSerialize);
+        EXTENSION_LOADER.loadExtension(SerializeFactory.class);
+        LinkedHashMap<String, Class> serializeFactoryClassMap = EXTENSION_LOADER_CLASS_CACHE.get(SerializeFactory.class.getName());
+        Class serializeFactoryClass = serializeFactoryClassMap.get(serverSerialize.name());
+        if (serializeFactoryClass == null) {
+            throw new RuntimeException("no match serialize type for " + serverSerialize);
+        }
+        SERVER_SERIALIZE_FACTORY = (SerializeFactory) serializeFactoryClass.newInstance();
 
         // 服务端责任链初始化
+        EXTENSION_LOADER.loadExtension(IServerFilter.class);
+        LinkedHashMap<String, Class> iServerFilterClassMap = EXTENSION_LOADER_CLASS_CACHE.get(IServerFilter.class.getName());
         ServerFilterChain serverFilterChain = new ServerFilterChain();
-        serverFilterChain.addServerFilter(new ServerLogFilterImpl());
-        serverFilterChain.addServerFilter(new ServerTokenFilterImpl());
+        for (String iServerFilterKey : iServerFilterClassMap.keySet()) {
+            Class iServerFilterClass = iServerFilterClassMap.get(iServerFilterKey);
+            if (iServerFilterClass == null) {
+                throw new RuntimeException("no match iServerFilter type for " + iServerFilterKey);
+            }
+            serverFilterChain.addServerFilter((IServerFilter) iServerFilterClass.newInstance());
+        }
         SERVER_FILTER_CHAIN = serverFilterChain;
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
         Server server = new Server();
         // 初始化服务配置
         server.initServerConfig();

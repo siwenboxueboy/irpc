@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static common.cache.CommonClientCache.CLIENT_CONFIG;
+import static common.cache.CommonServerCache.SERVER_CONFIG;
+
 /**
  * 服务端 注册 取消
  * 客户端 订阅 取消订阅
@@ -22,7 +25,13 @@ public class ZookeeperRegister extends AbstractRegister implements RegistryServi
 
     private String ROOT = "/irpc";
 
-
+    /**
+     * newInstance 时必须得用无参构造
+     * */
+    public ZookeeperRegister() {
+        String registryAddr = CLIENT_CONFIG!= null ? CLIENT_CONFIG.getRegisterAddr() : SERVER_CONFIG.getRegisterAddr();
+        this.zkClient = new CuratorZookeeperClient(registryAddr);
+    }
     public ZookeeperRegister(String address) {
         this.zkClient = new CuratorZookeeperClient(address);
     }

@@ -1,0 +1,4 @@
+KRYO=serialize.kryo.KryoSerializeFactory
+JDK=serialize.jdk.JdkSerializeFactory
+HESSION_2=serialize.hessian.HessianSerializeFactory
+FAST_JSON=serialize.fastjson.FastJsonSerializeFactory

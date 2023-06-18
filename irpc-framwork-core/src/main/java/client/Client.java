@@ -7,14 +7,11 @@ import common.RpcInvocation;
 import common.RpcProtocol;
 import common.config.ClientConfig;
 import common.config.PropertiesBootstrap;
-import common.constants.RpcConstants;
 import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
 import enums.SerializeEnum;
+import filter.IClientFilter;
 import filter.client.ClientFilterChain;
-import filter.client.ClientLogFilterImpl;
-import filter.client.DirectInvokeFilterImpl;
-import filter.client.GroupFilterImpl;
 import interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -26,20 +23,20 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import proxy.javassist.JavassistProxyFactory;
-import proxy.jdk.JDKProxyFactory;
+import proxy.ProxyFactory;
+import registy.RegistryService;
 import registy.URL;
 import registy.zookeeper.AbstractRegister;
-import registy.zookeeper.ZookeeperRegister;
-import router.RandomRouterImpl;
-import router.RotateRouterImpl;
+import router.IRouter;
+import serialize.SerializeFactory;
 
+import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static common.cache.CommonClientCache.*;
-import static common.constants.RpcConstants.RANDOM_ROUTER_TYPE;
-import static common.constants.RpcConstants.ROTATE_ROUTER_TYPE;
+import static spi.ExtensionLoader.EXTENSION_LOADER_CLASS_CACHE;
 
 @Slf4j
 public class Client {
@@ -49,8 +46,6 @@ public class Client {
     @Getter
     @Setter
     private ClientConfig clientConfig;
-
-    private AbstractRegister abstractRegister;
 
     private IRpcListenerLoader iRpcListenerLoader;
 
@@ -64,7 +59,7 @@ public class Client {
      * 2. 初始化 事件-监听 相关资源配置
      * 3. 初始化 代理工厂
      */
-    public RpcReference initClientApplication() throws InterruptedException {
+    public RpcReference initClientApplication() throws InterruptedException, IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
         bootstrap.group(clientGroup);
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
@@ -86,39 +81,49 @@ public class Client {
 
         this.clientConfig = PropertiesBootstrap.loadClientConfigFromLocal();
         CLIENT_CONFIG = this.clientConfig;
-        RpcReference rpcReference;
 
-        if (RpcConstants.JAVASSIST_PROXY_TYPE.equals(clientConfig.getProxyType())) {
-            rpcReference = new RpcReference(new JavassistProxyFactory());
-        } else {
-            rpcReference = new RpcReference(new JDKProxyFactory());
-        }
-        return rpcReference;
+        // spi扩展的加载部分
+        this.initClientConfig();
+        EXTENSION_LOADER.loadExtension(ProxyFactory.class);
+        String proxyType = clientConfig.getProxyType();
+        LinkedHashMap<String, Class> classMap = EXTENSION_LOADER_CLASS_CACHE.get(ProxyFactory.class.getName());
+        Class proxyClassType = classMap.get(proxyType);
+        ProxyFactory proxyFactory = (ProxyFactory) proxyClassType.newInstance();
+        return new RpcReference(proxyFactory);
     }
 
-    private void initClientConfig() {
-        //初始化路由策略
-
+    private void initClientConfig() throws InstantiationException, IllegalAccessException, IOException, ClassNotFoundException {
+        //init router
+        EXTENSION_LOADER.loadExtension(IRouter.class);
         String routerStrategy = clientConfig.getRouterStrategy();
-        switch (routerStrategy) {
-            case RANDOM_ROUTER_TYPE:
-                IROUTER = new RandomRouterImpl();
-                break;
-            case ROTATE_ROUTER_TYPE:
-                IROUTER = new RotateRouterImpl();
-                break;
-            default:
-                throw new RuntimeException("no match routerStrategy for" + routerStrategy);
+        LinkedHashMap<String, Class> iRouterMap = EXTENSION_LOADER_CLASS_CACHE.get(IRouter.class.getName());
+        Class iRouterClass = iRouterMap.get(routerStrategy);
+        if (iRouterClass == null) {
+            throw new RuntimeException("no match routerStrategy for " + routerStrategy);
         }
-        // 设置客户端序列化方式
-        SerializeEnum clientSerialize = clientConfig.getClientSerialize();
-        CLIENT_SERIALIZE_FACTORY = SerializeEnum.getSerializeFactory(clientSerialize);
+        IROUTER = (IRouter) iRouterClass.newInstance();
 
-        // 初始化过滤链 指定过滤的顺序
+        //初始化序列化框架
+        EXTENSION_LOADER.loadExtension(SerializeFactory.class);
+        SerializeEnum clientSerialize = clientConfig.getClientSerialize();
+        LinkedHashMap<String, Class> serializeMap = EXTENSION_LOADER_CLASS_CACHE.get(SerializeFactory.class.getName());
+        Class serializeFactoryClass = serializeMap.get(clientSerialize.name());
+        if (serializeFactoryClass == null) {
+            throw new RuntimeException("no match serialize type for " + clientSerialize.name());
+        }
+        CLIENT_SERIALIZE_FACTORY = (SerializeFactory) serializeFactoryClass.newInstance();
+
+        // 初始化过滤链
+        EXTENSION_LOADER.loadExtension(IClientFilter.class);
         ClientFilterChain clientFilterChain = new ClientFilterChain();
-        clientFilterChain.addClientFilter(new DirectInvokeFilterImpl());
-        clientFilterChain.addClientFilter(new GroupFilterImpl());
-        clientFilterChain.addClientFilter(new ClientLogFilterImpl());
+        LinkedHashMap<String, Class> iClientMap = EXTENSION_LOADER_CLASS_CACHE.get(IClientFilter.class.getName());
+        for (String implClassName : iClientMap.keySet()) {
+            Class iClientFilterClass = iClientMap.get(implClassName);
+            if (iClientFilterClass == null) {
+                throw new RuntimeException("no match iClientFilter for " + iClientFilterClass);
+            }
+            clientFilterChain.addClientFilter((IClientFilter) iClientFilterClass.newInstance());
+        }
         CLIENT_FILTER_CHAIN = clientFilterChain;
     }
 
@@ -128,16 +133,23 @@ public class Client {
      * @param serviceBean
      */
     public void doSubscribeService(Class serviceBean) {
-        if (abstractRegister == null) {
-            abstractRegister = new ZookeeperRegister(clientConfig.getRegisterAddr());
+        if (ABSTRACT_REGISTER == null) {
+            try {
+                EXTENSION_LOADER.loadExtension(RegistryService.class);
+                Map<String, Class> registerMap = EXTENSION_LOADER_CLASS_CACHE.get(RegistryService.class.getName());
+                Class registerClass = registerMap.get(clientConfig.getRegisterType());
+                ABSTRACT_REGISTER = (AbstractRegister) registerClass.newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("registryServiceType unKnow,error is ", e);
+            }
         }
         URL url = new URL();
         url.setApplicationName(clientConfig.getApplicationName());
         url.setServiceName(serviceBean.getName());
         url.addParameter("host", CommonUtils.getIpAddress());
-        Map<String, String> result = abstractRegister.getServiceWeightMap(serviceBean.getName());
+        Map<String, String> result = ABSTRACT_REGISTER.getServiceWeightMap(serviceBean.getName());
         URL_MAP.put(serviceBean.getName(), result);
-        abstractRegister.subscribe(url);
+        ABSTRACT_REGISTER.subscribe(url);
     }
 
     /**
@@ -145,7 +157,7 @@ public class Client {
      */
     public void doConnectServer() {
         for (URL providerURL : SUBSCRIBE_SERVICE_LIST) {
-            List<String> providerIps = abstractRegister.getProviderIps(providerURL.getServiceName());
+            List<String> providerIps = ABSTRACT_REGISTER.getProviderIps(providerURL.getServiceName());
             for (String providerIp : providerIps) {
                 try {
                     ConnectionHandler.connect(providerURL.getServiceName(), providerIp);
@@ -158,7 +170,7 @@ public class Client {
             url.addParameter("providerIps", JSON.toJSONString(providerIps));
             //客户端在此新增一个订阅的功能
             // 为什么要在这里做这个事情？ 上面connect连接了提供者，这里要监听提供者是否下线，如果下线了，客户端要主动断开连接
-            abstractRegister.doAfterSubscribe(url);
+            ABSTRACT_REGISTER.doAfterSubscribe(url);
         }
     }
 
@@ -191,7 +203,7 @@ public class Client {
 
                     // netty的通道负责发送数据给服务端
                     ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(rpcInvocation);
-                    if (channelFuture != null){
+                    if (channelFuture != null) {
                         RpcProtocol rpcProtocol = new RpcProtocol(CLIENT_SERIALIZE_FACTORY.serialize(rpcInvocation));
                         channelFuture.channel().writeAndFlush(rpcProtocol);
                     }
@@ -206,8 +218,6 @@ public class Client {
         Client client = new Client();
         // 初始化客户端网络服务器以及客户端代理
         RpcReference rpcReference = client.initClientApplication();
-        // 初始化客户端路由
-        client.initClientConfig();
 
         RpcReferenceWrapper<DataService> rpcReferenceWrapper = new RpcReferenceWrapper<>();
         rpcReferenceWrapper.setAimClass(DataService.class);

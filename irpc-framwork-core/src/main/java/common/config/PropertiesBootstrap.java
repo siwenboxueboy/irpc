@@ -12,6 +12,7 @@ public class PropertiesBootstrap {
 
     public static final String SERVER_PORT = "irpc.serverPort";
     public static final String REGISTER_ADDRESS = "irpc.registerAddr";
+    public static final String REGISTER_TYPE = "irpc.registerType";
     public static final String APPLICATION_NAME = "irpc.applicationName";
     public static final String PROXY_TYPE = "irpc.proxyType";
     public static final String PROXY_ROUTER_STRATEGY = "irpc.routerStrategy";
@@ -32,6 +33,7 @@ public class PropertiesBootstrap {
         ServerConfig serverConfig = new ServerConfig();
         serverConfig.setServerPort(PropertiesLoader.getPropertiesInteger(SERVER_PORT));
         serverConfig.setApplicationName(PropertiesLoader.getPropertiesStr(APPLICATION_NAME));
+        serverConfig.setRegisterType(PropertiesLoader.getPropertiesStr(REGISTER_TYPE));
         serverConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
         serverConfig.setServerSerialize(SerializeEnum.valueOf(PropertiesLoader.getPropertiesStrDefault(SERVER_SERIALIZE_TYPE, SerializeEnum.JDK.name())));
         return serverConfig;
@@ -49,6 +51,7 @@ public class PropertiesBootstrap {
         ClientConfig clientConfig = new ClientConfig();
         clientConfig.setApplicationName(PropertiesLoader.getPropertiesStr(APPLICATION_NAME));
         clientConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
+        clientConfig.setRegisterType(PropertiesLoader.getPropertiesStr(REGISTER_TYPE));
         clientConfig.setProxyType(PropertiesLoader.getPropertiesStr(PROXY_TYPE));
         clientConfig.setRouterStrategy(PropertiesLoader.getPropertiesStr(PROXY_ROUTER_STRATEGY));
         clientConfig.setClientSerialize(SerializeEnum.valueOf(PropertiesLoader.getPropertiesStrDefault(CLIENT_SERIALIZE_TYPE, SerializeEnum.JDK.name())));

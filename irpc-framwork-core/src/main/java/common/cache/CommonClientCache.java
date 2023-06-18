@@ -6,8 +6,10 @@ import common.ChannelFutureWrapper;
 import common.RpcInvocation;
 import common.config.ClientConfig;
 import registy.URL;
+import registy.zookeeper.AbstractRegister;
 import router.IRouter;
 import serialize.SerializeFactory;
+import spi.ExtensionLoader;
 
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -103,4 +105,14 @@ public class CommonClientCache {
      * 过滤链的实例
      * */
     public static ClientFilterChain CLIENT_FILTER_CHAIN;
+    // ===========================register=======================
+    /**
+     * 全局注册中心
+     * */
+    public static AbstractRegister ABSTRACT_REGISTER;
+    // ===========================spi=======================
+    /**
+     * spi机制 类加载器
+     * */
+    public static ExtensionLoader EXTENSION_LOADER = new ExtensionLoader();
 }
