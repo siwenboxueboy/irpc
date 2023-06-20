@@ -224,6 +224,7 @@ public class Client {
         rpcReferenceWrapper.setGroup("dev");
         rpcReferenceWrapper.setServiceToken("token-a");
         rpcReferenceWrapper.setAsync(true);
+        rpcReferenceWrapper.setRetry(0);
         // 获得代理对象
         DataService dataService = rpcReference.get(rpcReferenceWrapper);
         // 订阅相关服务接口

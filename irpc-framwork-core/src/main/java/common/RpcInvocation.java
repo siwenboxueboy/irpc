@@ -25,4 +25,9 @@ public class RpcInvocation implements Serializable {
     private Object response;
     // 附件信息
     private Map<String, Object> attachments = new ConcurrentHashMap<>();
+    // 记录服务端的异常信息
+    // 相关的异常信息则是在服务端的org.idea.irpc.framework.core.dispatcher.ServerChannelDispatcher.ServerJobCoreHandle任务中进行捕获
+    private Throwable e;
+    // 客户端重试次数
+    private int retry;
 }

@@ -64,9 +64,20 @@ public class ServerChannelDispatcher {
                                 if (method.getName().equals(rpcInvocation.getTargetMethod())) {
                                     // 通过反射找到目标对象，然后执行目标方法并返回对应值
                                     if (method.getReturnType().equals(Void.TYPE)) {
-                                        method.invoke(aimObject, rpcInvocation.getArgs());
+                                        try {
+                                            method.invoke(aimObject, rpcInvocation.getArgs());
+                                        } catch (Exception e) {
+                                            // 业务异常
+                                            rpcInvocation.setE(e);
+                                        }
+
                                     } else {
-                                        result = method.invoke(aimObject, rpcInvocation.getArgs());
+                                        try {
+                                            result = method.invoke(aimObject, rpcInvocation.getArgs());
+                                        } catch (Exception e) {
+                                            // 业务异常
+                                            rpcInvocation.setE(e);
+                                        }
                                     }
                                     break;
                                 }

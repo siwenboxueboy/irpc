@@ -12,6 +12,31 @@ public class RpcReferenceWrapper<T> {
 
     private Map<String, Object> attatchments = new ConcurrentHashMap<>();
 
+    /**
+     * 设置容错策略
+     *
+     * @param tolerant
+     */
+    public void setTolerant(String tolerant) {
+        this.attatchments.put("tolerant", tolerant);
+    }
+
+    /**
+     * 失败重试次数
+     */
+    public int getRetry() {
+        if (attatchments.get("retry") == null) {
+            return 0;
+        } else {
+            return (int) attatchments.get("retry");
+        }
+    }
+
+    public void setRetry(int retry) {
+        this.attatchments.put("retry", retry);
+    }
+
+
     public boolean isAsync() {
         Object r = attatchments.get("async");
         if (r == null) {
@@ -30,6 +55,14 @@ public class RpcReferenceWrapper<T> {
 
     public void setUrl(String url) {
         attatchments.put("url", url);
+    }
+
+    public void setTimeOut(int timeOut) {
+        attatchments.put("timeOut", timeOut);
+    }
+
+    public String getTimeOUt() {
+        return attatchments.get("timeOut") == null ? null : attatchments.get("timeOut").toString();
     }
 
     public String getServiceToken() {
