@@ -29,6 +29,8 @@ public class PropertiesBootstrap {
 
     public static final String SERVER_QUEUE_SIZE = "irpc.server.queue.size";
 
+    public static final String SERVER_MAX_CONNECTION = "irpc.server.max.connection";
+
     /**
      * 服务提供者配置
      */
@@ -46,6 +48,7 @@ public class PropertiesBootstrap {
         serverConfig.setServerSerialize(SerializeEnum.valueOf(PropertiesLoader.getPropertiesStrDefault(SERVER_SERIALIZE_TYPE, SerializeEnum.JDK.name())));
         serverConfig.setServerBizThreadNums(PropertiesLoader.getPropertiesIntegerDefault(SERVER_BIZ_THREAD_NUMS, DEFAULT_THREAD_NUMS));
         serverConfig.setServerQueueSize(PropertiesLoader.getPropertiesIntegerDefault(SERVER_QUEUE_SIZE, DEFAULT_QUEUE_SIZE));
+        serverConfig.setMaxConnections(PropertiesLoader.getPropertiesIntegerDefault(SERVER_MAX_CONNECTION,DEFAULT_MAX_CONNECTION_NUMS));
         return serverConfig;
     }
 
