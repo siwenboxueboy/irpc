@@ -3,13 +3,15 @@ package server;
 
 import common.RpcDecoder;
 import common.RpcEncoder;
+import common.annotation.SPI;
 import common.config.PropertiesBootstrap;
 import common.config.ServerConfig;
 import common.event.IRpcListenerLoader;
 import common.utils.CommonUtils;
 import enums.SerializeEnum;
 import filter.IServerFilter;
-import filter.server.ServerFilterChain;
+import filter.server.ServerAfterFilterChain;
+import filter.server.ServerBeforeFilterChain;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -154,15 +156,22 @@ public class Server {
         // 服务端责任链初始化
         EXTENSION_LOADER.loadExtension(IServerFilter.class);
         LinkedHashMap<String, Class> iServerFilterClassMap = EXTENSION_LOADER_CLASS_CACHE.get(IServerFilter.class.getName());
-        ServerFilterChain serverFilterChain = new ServerFilterChain();
+        ServerBeforeFilterChain serverBeforeFilterChain = new ServerBeforeFilterChain();
+        ServerAfterFilterChain serverAfterFilterChain = new ServerAfterFilterChain();
         for (String iServerFilterKey : iServerFilterClassMap.keySet()) {
             Class iServerFilterClass = iServerFilterClassMap.get(iServerFilterKey);
             if (iServerFilterClass == null) {
                 throw new RuntimeException("no match iServerFilter type for " + iServerFilterKey);
             }
-            serverFilterChain.addServerFilter((IServerFilter) iServerFilterClass.newInstance());
+            SPI spi = (SPI) iServerFilterClass.getDeclaredAnnotation(SPI.class);
+            if (spi != null && "before".equals(spi.value())) {
+                serverBeforeFilterChain.addServerFilter((IServerFilter) iServerFilterClass.newInstance());
+            } else if (spi != null && "after".equals(spi.value())) {
+                serverAfterFilterChain.addServerFilter((IServerFilter) iServerFilterClass.newInstance());
+            }
         }
-        SERVER_FILTER_CHAIN = serverFilterChain;
+        SERVER_AFTER_FILTER_CHAIN = serverAfterFilterChain;
+        SERVER_BEFORE_FILTER_CHAIN = serverBeforeFilterChain;
     }
 
     public static void main(String[] args) throws InterruptedException, IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {

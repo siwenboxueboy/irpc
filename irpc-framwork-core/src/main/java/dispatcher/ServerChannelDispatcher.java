@@ -2,6 +2,7 @@ package dispatcher;
 
 import common.RpcInvocation;
 import common.RpcProtocol;
+import common.exception.IRpcException;
 import filter.server.ServerChannelReadData;
 import lombok.NoArgsConstructor;
 
@@ -54,7 +55,22 @@ public class ServerChannelDispatcher {
                             RpcProtocol rpcProtocol = serverChannelReadData.getRpcProtocol();
                             RpcInvocation rpcInvocation = SERVER_SERIALIZE_FACTORY.deserialize(rpcProtocol.getContent(), RpcInvocation.class);
 
-                            SERVER_FILTER_CHAIN.doFilter(rpcInvocation);
+                            //执行过滤链路
+                            try {
+                                //前置过滤器
+                                SERVER_BEFORE_FILTER_CHAIN.doFilter(rpcInvocation);
+                            } catch (Exception cause) {
+                                //针对自定义异常进行捕获，并且直接返回异常信息给到客户端，然后打印结果
+                                if (cause instanceof IRpcException) {
+                                    IRpcException rpcException = (IRpcException) cause;
+                                    RpcInvocation reqParam = rpcException.getRpcInvocation();
+                                    rpcInvocation.setE(rpcException);
+                                    byte[] body = SERVER_SERIALIZE_FACTORY.serialize(reqParam);
+                                    RpcProtocol respRpcProtocol = new RpcProtocol(body);
+                                    serverChannelReadData.getChannelHandlerContext().writeAndFlush(respRpcProtocol);
+                                    return;
+                                }
+                            }
 
                             // 这里的PROVIDER_CLASS_MAP就是一开始预先在启动时候存储的Bean集合
                             Object aimObject = PROVIDER_CLASS_MAP.get(rpcInvocation.getTargetServiceName());
@@ -64,15 +80,27 @@ public class ServerChannelDispatcher {
                                 if (method.getName().equals(rpcInvocation.getTargetMethod())) {
                                     // 通过反射找到目标对象，然后执行目标方法并返回对应值
                                     if (method.getReturnType().equals(Void.TYPE)) {
-                                        method.invoke(aimObject, rpcInvocation.getArgs());
+                                        try {
+                                            method.invoke(aimObject, rpcInvocation.getArgs());
+                                        } catch (Exception e) {
+                                            //业务异常
+                                            rpcInvocation.setE(e);
+                                        }
                                     } else {
-                                        result = method.invoke(aimObject, rpcInvocation.getArgs());
+                                        try {
+                                            result = method.invoke(aimObject, rpcInvocation.getArgs());
+                                        } catch (Exception e) {
+                                            //业务异常
+                                            rpcInvocation.setE(e);
+                                        }
                                     }
                                     break;
                                 }
                             }
                             // 请求完成，设置
                             rpcInvocation.setResponse(result);
+                            //后置过滤器
+                            SERVER_AFTER_FILTER_CHAIN.doFilter(rpcInvocation);
                             // 序列化执行结果
                             RpcProtocol respRpcProtocol = new RpcProtocol(SERVER_SERIALIZE_FACTORY.serialize(rpcInvocation));
                             serverChannelReadData.getChannelHandlerContext().writeAndFlush(respRpcProtocol);

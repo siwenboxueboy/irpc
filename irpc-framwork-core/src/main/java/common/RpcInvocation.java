@@ -25,4 +25,8 @@ public class RpcInvocation implements Serializable {
     private Object response;
     // 附件信息
     private Map<String, Object> attachments = new ConcurrentHashMap<>();
+
+    private Throwable e;
+
+    private int retry;
 }

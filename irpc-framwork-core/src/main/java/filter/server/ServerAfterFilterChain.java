@@ -5,10 +5,8 @@ import filter.IServerFilter;
 
 import java.util.ArrayList;
 import java.util.List;
-/**
- * 服务端模块的过滤器链路
- * */
-public class ServerFilterChain {
+
+public class ServerAfterFilterChain {
     private static List<IServerFilter> iServerFilters = new ArrayList<>();
 
     public void addServerFilter(IServerFilter iServerFilter) {

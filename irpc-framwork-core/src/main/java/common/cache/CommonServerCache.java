@@ -1,9 +1,11 @@
 package common.cache;
 
 import cn.hutool.core.map.MapUtil;
+import common.ServerServiceSemaphoreWrapper;
 import common.config.ServerConfig;
 import dispatcher.ServerChannelDispatcher;
-import filter.server.ServerFilterChain;
+import filter.server.ServerAfterFilterChain;
+import filter.server.ServerBeforeFilterChain;
 import registy.RegistryService;
 import registy.URL;
 import serialize.SerializeFactory;
@@ -43,7 +45,8 @@ public class CommonServerCache {
     public static ServerConfig SERVER_CONFIG;
 
     // ===========================filter chain instance=======================
-    public static ServerFilterChain SERVER_FILTER_CHAIN;
+    public static ServerBeforeFilterChain SERVER_BEFORE_FILTER_CHAIN;
+    public static ServerAfterFilterChain SERVER_AFTER_FILTER_CHAIN;
 
     public static final Map<String, ServiceWrapper> PROVIDER_SERVICE_WRAPPER_MAP = new ConcurrentHashMap<>();
     // ===========================sign server started=======================
@@ -51,4 +54,7 @@ public class CommonServerCache {
 
     // ===========================server channel dispatcher instance=======================
     public static ServerChannelDispatcher SERVER_CHANNEL_DISPATCHER = new ServerChannelDispatcher();
+
+    // ===========================server 存放接口限流组件实例 =======================
+    public static final Map<String, ServerServiceSemaphoreWrapper> SERVER_SERVICE_SEMAPHORE_MAP = new ConcurrentHashMap<>(64);
 }
