@@ -28,4 +28,9 @@ public class ServerConfig {
      */
     private Integer serverQueueSize;
 
+    /**
+     * 服务端最大连接数
+     */
+    private Integer maxConnections;
+
 }
