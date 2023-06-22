@@ -18,3 +18,4 @@ buildNumber.properties
 # Intellij 
 *.iml
 .idea
+*.log
