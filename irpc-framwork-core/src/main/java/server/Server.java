@@ -136,7 +136,7 @@ public class Server {
         task.start();
     }
 
-    private void initServerConfig() throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
+    public void initServerConfig() throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
         ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
         this.setServerConfig(serverConfig);
         SERVER_CONFIG = serverConfig;

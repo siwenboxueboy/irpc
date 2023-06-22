@@ -10,7 +10,10 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="irpc-framework-interface" />
+        <module name="irpc-framework-spring-starter" />
         <module name="irpc-framwork-core" />
+        <module name="irpc-framework-conusmer" />
       </profile>
     </annotationProcessing>
   </component>

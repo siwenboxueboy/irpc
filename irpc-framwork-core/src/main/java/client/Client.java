@@ -174,7 +174,7 @@ public class Client {
         }
     }
 
-    private void startClient() {
+    public void startClient() {
         Thread asyncSendJob = new Thread(new AsyncSendJob());
         asyncSendJob.start();
     }

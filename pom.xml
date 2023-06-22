@@ -10,6 +10,10 @@
     <version>1.0-SNAPSHOT</version>
     <modules>
         <module>irpc-framwork-core</module>
+        <module>irpc-framework-spring-starter</module>
+        <module>irpc-framework-interface</module>
+        <module>irpc-framework-provider</module>
+        <module>irpc-framework-conusmer</module>
     </modules>
 
     <properties>

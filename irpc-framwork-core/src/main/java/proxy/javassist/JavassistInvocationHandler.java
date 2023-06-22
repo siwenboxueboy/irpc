@@ -38,7 +38,7 @@ public class JavassistInvocationHandler  implements InvocationHandler {
         }
         long beginTime = System.currentTimeMillis();
         //如果请求数据在指定时间内返回则返回给客户端调用方
-        while (System.currentTimeMillis() - beginTime < 3*1000) {
+        while (System.currentTimeMillis() - beginTime < 5*1000) {
             Object object = RESP_MAP.get(rpcInvocation.getUuid());
             if (object instanceof RpcInvocation) {
                 return ((RpcInvocation)object).getResponse();
